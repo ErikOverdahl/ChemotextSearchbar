@@ -1,14 +1,53 @@
 <html>
   <head>
+    <meta charset="utf-8">
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
   </head>
 
   <body class="container">
-    <!-- HTML for SEARCH BAR -->
-	<div id="tfheader">
-		<form id="chemotext-search" method="post" action="">
-		        <input type="text" class="tftextinput" name="q" size="21" maxlength="120"><input type="submit" value="search" class="tfbutton">
-		</form>
-	<div class="tfclear"></div>
-	</div>
+	<main id="content" autocomplete="off">
+      <script type="text/javascript">
+        function getResults(){
+            var input = document.getElementById("inputbar")
+            queryNeo4J(getMentionsPayload(input.value))
+        }
+        
+        function queryNeo4J(payload){
+            console.log(payload)
+            $.ajax({
+		        url: "http://chemotext.mml.unc.edu:7474/db/data/transaction/commit",
+		        accepts: "application/json; charset=UTF-8",
+		        dataType:"json",
+		        contentType:"application/json",
+		        data: payload,
+		        type:"POST",
+		        success:function(data,xhr,status){ console.log(data); },
+		        error:function(xhr,err,msg){
+			        console.log(xhr);
+			        console.log(err+": "+msg);
+			        $("#loader").hide();
+			        $(displayText).text("Connection to Neo4j Database rejected");
+		        }
+	        });
+        }
+        
+        function getMentionsPayload(name){
+	        return JSON.stringify({
+		        "statements" : [{
+			        // match Terms with the name 'name' that are mentioned by an 'article' that mentions a 'term'
+			        "statement": "MATCH (:Term{name:{name}})-[:MENTIONS]-(article)-[:MENTIONS]-(term) " +
+				        "RETURN term, collect(article) as articleList " +	//return each term and its list of articles
+				        "ORDER BY size(articleList) DESC", 	//sorted by number of articles
+			        "parameters" : {"name": name}
+		        }]
+	        });
+        } 
+      </script>
+      
+      <input type="text" id="inputbar">
+      <input type="button" onclick="getResults()" value="Search">
+	</main>
+
   </body>
+  
 </html>
